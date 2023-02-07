@@ -1,0 +1,65 @@
+---
+title: "BT2101_GA6"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r import data, echo=TRUE}
+library(dplyr)
+library(tidyr)
+library(readxl)
+library(AER)
+data <- read_excel("GA6-movies.xlsx")
+head(data)
+```
+
+
+```{r part(a), echo=TRUE}
+model.basic <- lm(log(assaults) ~ attend_v + year2 + year3 + year4 + year5 + year6 + year7 + year8 + year9 + year10 + month2 + month3 + month4 + month5 + month6 + month7 + month8 + month9 + month10 + month11 + month12 + w_rain + w_snow + w_maxa + w_maxb + w_maxc + w_mina + w_minb + w_minc + h_chris + h_newyr + h_easter + h_july4 + h_mem + h_labor,  data = data)
+
+summary(model.basic)
+
+```
+**question a**
+ Based on this regression, the coefficient of `attend_v` in the basic model is -0.0008530, this means that when the attendance for strongly violent movies increases by 1 million, the number of assaults and intimidation decreases by 0.08530%, while the other controlled variables (year, month, weather and presence of a holiday) remain unchanged. However, it has a p-value of 0.33936, meaning that the estimate is not statistically significant since it is > 0.05. Therefore, based on the regression, viewing a strongly violent movie is not correlated with the log of number of assaults. 
+ 
+**question b**
+```{r part(b), echo=TRUE}
+cor <- cor(data$pr_attend_v, data$attend_v)
+cor
+```
+`pr_attend_v`, the predicted attendance for strongly violent movies is a valid instrument variable. Firstly, let's examine the instrument relevance. 
+The predicted attendance for strongly violent movies based on historical attendance is correlated with the actual attendance, and if the prediction has high accuracy, the correlation can go very close to 1. In fact, from the output, we get the correlation to be 0.9643. For example, if the attendance of a film in the past week is high, the predicted attendance is likely to be high (while also considers how long the film has been released), and the actual performance is likely to be high too. Therefore it satisfies the instrument relevance.
+
+Predictions made based on historical records of attendance are independent of other variables as it does not utilize information from that same weekend on which the prediction is made. This means it does not factor in the weather of the actual date, also the date (year, month, and the presence of a holiday). Therefore, it only affects the dependent variable log of `assults` through `attend_v`.
+
+```{r part(c), echo=TRUE}
+model.instrument <- lm(attend_v ~ pr_attend_v, data = data)
+summary(model.instrument)
+data$v.hat <- fitted.values(model.instrument)
+
+model.2 <-lm(log(assaults) ~ v.hat + year2 + year3 + year4 + year5 + year6 + year7 + year8 + year9 + year10 + month2 + month3 + month4 + month5 + month6 + month7 + month8 + month9 + month10 + month11 + month12 + w_rain + w_snow + w_maxa + w_maxb + w_maxc + w_mina + w_minb + w_minc + h_chris + h_newyr + h_easter + h_july4 + h_mem + h_labor,  data = data)
+
+summary(model.2)
+```
+**question c**
+Firstly, we use the linear regression model of `attend_v` against `pr-attend_v` for the first stage regression. By running this regression, model.2, it separates the part of `attend_v` that is not correlated with the omitted variables in the basic model. From the results of the first stage regression, we get the coefficient of `pr_attend_v` in model.instrument is 0.9419, and statistically significant with p-value of < 2e-16, which is less than 0.05. This means that when the predicted attendance of strongly violent movies increases by 1 million, the attendance of strongly violent movies increases by 0.9419 million. Then, we will use the fitted result from the model, `v.hat` for the second stage regression.
+
+Based on the second stage regression, the coefficient of `v.hat` in the 2SLS model is -0.001098, this means that when the attendance for strongly violent movies increases by 1 million, the number of assaults and intimidation decreases by 0.1098%, while the other controlled variables (year, month, weather and presence of a holiday) remain unchanged. However, it has a p-value of 0.2364, meaning that the estimate is not statistically significant since it is > 0.05. Therefore, based on the regression, viewing a strongly violent movie is not correlated with the number of assaults.
+
+The coefficient has a decrease from the basic model, which is -0.0008530, by 0.000245. This decrease is 27.47% of the standard error of the coefficient in the basic model, 0.2746945. The p-value also decreased from 0.33936 to 0.2364, while the estimate still remains statistically insignificant, the decrease in p-value indicates an increase in significance in the estimates. This is due to the introduction of an instrument variable `pr_attend_v`, which only retains the changes in `attend_v` that is uncorrelated with omitted variable and use it to estimate without bias. 
+
+```{r part(d), echo=TRUE}
+model.3 <-ivreg(log(assaults) ~ attend_v + year2 + year3 + year4 + year5 + year6 + year7 + year8 + year9 + year10 + month2 + month3 + month4 + month5 + month6 + month7 + month8 + month9 + month10 + month11 + month12 + w_rain + w_snow + w_maxa + w_maxb + w_maxc + w_mina + w_minb + w_minc + h_chris + h_newyr + h_easter + h_july4 + h_mem + h_labor|.- attend_v + pr_attend_v,  data = data)
+
+summary(model.3)
+```
+**question d**
+When we run the ivreg() function, the coefficient of `attend_v` in model.3 is -0.001098, this means that when the attendance for strongly violent movies increases by 1 million, the number of assaults and intimidation decreases by 0.1098%, while the other controlled variables (year, month, weather and presence of a holiday) remain unchanged. However, it has a p-value of 0.2364, meaning that the estimate is not statistically significant since it is > 0.05. Therefore, based on the regression, viewing a strongly violent movie is not correlated with the number of assaults.
+
+Comparing to the basic model, the coefficient decreased from -0.0008530 in the basic model, by 0.000245. This decrease is 27.47% of the standard error of the coefficient in the basic model, 0.2746945. The p-value also decreased from 0.33936 to 0.2364, while the estimate still remains statistically insignificant, the decrease in p-value indicates an increase in significance in the estimates. This is due to the introduction of an instrument variable `pr_attend_v`, which only retains the changes in `attend_v` that is uncorrelated with omitted variable and use it to estimate without bias. 
+
+Comparing to the 2SLS model, the coefficient value and p-value are the same. This is due to that these two methods essentially do the same instrument variable regression despite the difference in codes. 

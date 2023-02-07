@@ -1,0 +1,114 @@
+---
+title: "BT2101_GA3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r import data}
+library(wooldridge)
+library(dplyr)
+library(tidyr)
+data(injury)
+head(injury)
+summary(injury)
+```
+
+
+```{r question(a), echo=TRUE}
+data.ky <- injury %>% filter(ky == 1)
+#`afhigh` is the interaction term of variables `highearn` and `afchnge`
+lm1 <- lm(durat ~ highearn + afchnge + afhigh, data = data.ky)
+summary(lm1)
+```
+From the regression result, the intercept value is 6.27. This means that the duration of "injury leave" for the control group, which is low income workers, before the policy change is expected to be  6.27 days. This value is statistically significant since the p-value is less than 0.05.
+
+The coefficient of `highearn` is 4.91, which is statistically significant (p-value = 1.3e-09 < 0.05). This means that the expected duration of "injury leave" for the treatment group, which is high income workers, before the policy change is 4.91 days more than the control group. In other words, the expected duration of "injury leave" for high-income workers pre-policy is 11.2 days. 
+
+The coefficient of `afchnge` is 0.766, which is not statistically significant (p-value = 0.314 > 0.05). This is the expected increase in the duration of "injury leave" for the control group, low-income workers, after the policy. 
+
+The coefficient of the interaction term `afhigh` is 0.951, which is not statistically significant (p-value = 0.414 > 0.05). This is the additional expected increase in the duration of "injury leave" for the treatment group, high-income workers, after the policy. In another word, the expected duration of "injury leave" for high-income workers after-policy is 12.9 days.
+
+Multiple r-squared of the regression is 0.0158, which means that 1.58% of the variance in `durat` is explained by the intervention, which is control(low-income) and treatment(high-income) group, and time, which is before and after the policy on cap for weekly earnings.
+
+```{r question(b), echo=TRUE}
+lm.log <- lm(ldurat ~ highearn + afchnge + afhigh, data = data.ky)
+summary(lm.log)
+```
+From the regression result, the intercept value is 1.13. This means that the duration of "injury leave" for the control group, which is low income workers, before the policy change is expected to be $e^{1.13}$ days. This value is statistically significant since the p-value is less than 0.05.
+
+The coefficient of `highearn` is 0.256, which is statistically significant (p-value = 6.72e-08 < 0.05). This means that the expected duration of "injury leave" for the treatment group, which is high income workers, before the policy change is 21.5% more than the control group. In other words, the expected duration of "injury leave" for high-income workers pre-policy is $e^{1.13} * 1.38 $ days. 
+
+The coefficient of `afchnge` is 0.00766, which is not statistically significant (p-value = 0.864 > 0.05). The expected percentage increase in the duration of "injury leave" for the control group, low-income workers, after the policy is 0.766%. 
+
+The coefficient of the interaction term `afhigh` is 0.191, which is statistically significant (p-value = 0.00542 < 0.05). Thus, the expected percentage increase in the duration of "injury leave" for the treatment group, high-income workers, after the policy is 45.5%.
+
+Multiple r-squared of the regression is 0.0207, which means that 2.07% of the variance in `ldurat` is explained by the intervention, which is control(low-income) and treatment(high-income) group, and time, which is before and after the policy on cap for weekly earnings. This is higher than when we use a linear-linear scale DiD regression, since more variance in the dependent variables can be explained by the independent variables while independent variables remain unchanged.
+
+```{r question(c), echo=TRUE}
+lm.logfull <- lm(ldurat ~ highearn + afchnge + afhigh + male + married + indust + injtype, data = data.ky)
+summary(lm.logfull)
+```
+When other variables(gender(`male`), industry type(`indust`), injury type (`injtype`), `married`) are controlled, the coefficient of the interaction term `afhigh` did not change much, from the previously statistically significant 0.188 (p-value is 0.00271) to 0.215. P-value of the coefficient is now 0.000783, which is also statistically significant. This increase in coefficient is small, as it is less than the standard error in coefficient `afhigh` from the previous regression (0.0628). 
+
+The coefficient of `highearn` decreases slightly from 0.215 to 0.180, smaller than the standard error in coefficient `highearn` 0.0434 , statistically significant with a p-value of 0.000129 < 0.5.                                                                                         
+The coefficient of `afchnge` also decreases slightly from 0.0236 to 0.0220, smaller than the standard error in coefficient `afchnge` 0.0397. However, it is now statistically insignificant with a p-value of 0.583 > 0.5. 
+
+These slight variations in the coefficients are likely due to the assumption of parallel trend was not met when other factors influencing the duration of "injury leave" are not included. The newly introduced variables in this part are confounders of this problem. For example, a person's occupation or the industry he/she works in, as indicated by the variable `indust`, can influence the amount of pay. Different industry also has a different working environment and pace, thus leading to different leeway in leave durations. By including such variables, confounders are considered and the regression result will be affected. However, do note that DiD regression focuses more on the change rather than the absolute level, which is the interaction term `afhigh`. This coefficent remains statistically significant and increased slightly, as DiD regression already accounts for change due to factors other than intervention. 
+
+
+**Question d**
+We disagree with that we cannot draw a causal inference due to the small magnitude of the
+R-squared and adjust R-squared. R-Squared shows how much the variance in `ldurat` is explained by the variables included in the regression, which in this case is 0.02114 for multiple r-squared and 0.02014 for adjusted r-squared (which adjust for overfitting due t o the number of variables included in the regression). A low r-squared is not a threat to internal validity, and causal inference is related to the logic of causality instead of how much the dependent data can be explained. 
+
+```{r question(e), echo=TRUE}
+injury.controlbefore <- data.ky %>% filter(highearn == 0) %>% filter(afchnge == 0)
+injury.treatmentbefore <- data.ky %>% filter(highearn == 1) %>% filter(afchnge == 0)
+
+injury.controlaft <- data.ky %>% filter(highearn == 0) %>% filter(afchnge == 1)
+injury.treatmentaft <- data.ky %>% filter(highearn == 1) %>% filter(afchnge == 1)
+
+# plot control group in t=1
+plot(injury.controlbefore$afchnge,
+     injury.controlbefore$ldurat, 
+     col = "red",
+     pch = 19, 
+     xlim = c(-0.5, 1.5),
+     ylim = c(0, 10),
+     ylab = "Y",
+     xlab = "Intervention",
+     xaxt = "n",
+     main = "Duration from Injury data")
+
+axis(1, at = c(0, 1), labels = c("before", "after"))
+
+# add treatment group in t=1
+points(injury.treatmentbefore$afchnge, 
+        injury.treatmentbefore$ldurat, 
+       col ="green", 
+       pch = 2)
+
+# add control group in t=2
+points(injury.controlaft$afchnge,
+        injury.controlaft$ldurat,  
+       col = "red",
+       pch = 19)
+
+# add treatment group in t=2
+points(injury.treatmentaft$afchnge,
+        injury.treatmentaft$ldurat, 
+       col = "green",
+       pch = 2)
+
+diff.aft <- mean(injury.treatmentaft$ldurat) - mean(injury.controlaft$ldurat)
+diff.before <- mean(injury.treatmentbefore$ldurat) - mean(injury.controlbefore$ldurat)
+
+diff.intervention <- (mean(injury.treatmentaft$ldurat) - mean(injury.controlaft$ldurat)) - 
+(mean(injury.treatmentbefore$ldurat) - mean(injury.controlbefore$ldurat))
+
+```
+The most critical assumption of the DiD model is the parallel trend assumption, which is treatment(high-income) and control groups(low-income) have parallel trends in duration of "injury leave" without intervention. 

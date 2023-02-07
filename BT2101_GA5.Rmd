@@ -1,0 +1,105 @@
+---
+title: "BT2101_GA5"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r import data}
+library(wooldridge)
+library(dplyr)
+library(tidyr)
+data(jtrain)
+data <-jtrain
+head(data)
+summary(data)
+
+```
+
+
+```{r part(a), echo=TRUE}
+model.1 <- lm(hrsemp ~ grant + employ, data = data)
+summary(model.1)
+```
+**NOTE** that the variable `hrsemp` in the dataset is `tothrs`/`totrain`, which is the total hours training divided by the total employees trained, or the average hours trained per employee. 
+
+**part a**
+From the regression equation, we can see that $\beta_{1}$ corresponds to the coefficient of variable `grant` in the dataset. 
+
+From the regression result, we know that the coefficient of `grant` is 33.71, and this coefficient is statisticaly significant as p-value of < 2e-16 is less than 0.05. It means that the average hours trained per employee for a company that received grant is 33.71 hours more than a company that does not receive a grant, ceteris paribus. 
+
+```{r part(b), echo=TRUE}
+model.2 <- lm(lhrsemp ~ grant + employ, data = data)
+summary(model.2)
+```
+**part b**
+When we run the log-transformed regression with dependent variable `lhrsemp`, we obtain the result as above. Similar to part(a), $\beta_{1}$ corresponds to the coefficient of variable `grant` in the dataset. 
+
+From the regression result, we know that the coefficient of `grant` is 2.107, and this coefficient is statisticaly significant as p-value of < 2e-16 is less than 0.05. It means that the average hours trained per employee for a company that received grant is 210.7% more than a company that does not receive a grant, ceteris paribus. 
+
+**part c**
+**Time-invariant confounder(entity specific):**
+An example of time-invariant confounder is the industry the company belongs to(e.g. healthcare, finance, education etc.). Normally, it does not change with time unless the company decides to take major actions in diversifying its products or switching to another industry. 
+
+The industry it belongs is likely to be related to the variable `grant`, as government may want to support certain sectors due to economic development strategies. 
+
+Similarly, the industry a company belongs to is likely to have an impact on the average training hour per worker. For companies that are more reliant on technicality, such as brokerage companies, it is likely that they need more time to train for the specifc instruments needed for that industry.
+
+**Firm-invariant confounder:**
+An example of firm-invariant confounder is major technology changes. Major technology changes, for example the invention of computer, occurs with time. There are constant changes to the technology available to be used in industries to make the general production process more efficient. It is the same for all firms at the same period of time, as such major changes are historic/influencial that has a wide application, not only belonging to one specific firm, and companies experience it together.
+
+Major technology changes are likely to be correlated to the variable `grant`. A new trend, for example using computers instead of written work, creates the needs to train workers. The government is likely to offer grants at these specific time points as they see a need to train to improve production efficiency.
+
+It is also likely to be correlated to the average training hours per worker. The presence of major technological changes may result higher average training hours per worker, as workers need to be trained to adapt to the new technology and learning to adapt a new thing often requires more time. 
+
+Another possible example of firm-invariant confounder is the unemployment rate. As firms are located in the same country, and the labour market they have access to is the same, unemployment rate is the same for them. However, unemployment rate changes with time due to economic weathers.
+
+Unemployment rate is likely to be correlated to the variable `grant`. When a country's unemployment rate is high, the government may offer grants to the firms to train workers to prevent a further increase in the unmeployment rate, or to provide firms with more budget to hire and train workers to lower the unemployment rate.
+
+It is also likely to be correlated to the average training time per worker. A low unemployment rate is possibly related to a high average training time per worker, as workers become more educated and thus more efficient, creating higher revenue for the company thus company has more budget allocated to hire more workers.
+
+**Fully flexible confounder:**
+An example of fully flexible confounder is firm size. Firm size of a firm changes with time, as over time a firm may grow larger with good operation. Firm size also varies across firms, as the market is comprised of firms of different sizes.
+
+Firm size is likely to be correlated to the variable `grant`, as the government may want to support the local SMEs (small medium enterprises) rather than providing grants for the MNCs (Multi-national companies) as SMEs are in need of more financial support to train their workers.
+
+Similarly, firm size is likely to have a correlation with the average training hours per worker. Larger companies are more likely to have more financial capabilities to provide their workers more training, thus higher average training hours per worker. Smaller companies may not have sufficient budget in training the workers, thus lower average trainig hours per worker.
+
+```{r part(d), echo=TRUE}
+model.3 <- lm(hrsemp ~ grant + employ + factor(year) + factor(fcode), data = data)
+summary(model.3)
+
+library(plm)
+model.4 <- plm(hrsemp ~ grant + employ, index=c("year", "fcode") , effect = "twoways", data = data)
+summary(model.4)
+```
+**part d**
+From both the lm and the plm regression result, we can observe that the coefficient of `grant` has increased slightly from 33.71 to 34.39, and remain statistically signficant as p-value is < 2e-16. This increase of 0.68 is very small comparing to the standard error of coefficient of `grant` in the basic model, which is 3.177. This means that when we fix both year and firm, the presence of a grant for a firm is associated with 34.39 hours of average training per worker more than without the grant, ceteris paribus.
+
+Model with entity-fixed and time-fixed effect has insignificant changes in the coefficient of `grant` (or $\beta_{1}$ ), and the statistics remains significant. This suggests that despite time-invariant and firm-invariant are possible confouders of this regression, the confounding effect is very small. In another word, there is little confounding variable concerns for both time-fixed variables and the state-fixed variables.
+
+When we run lm and plm regression, we obtain same results. The lm(OLS) regression  function ignores the panel structure and assumes the error terms to be homoscedastic and no correlation. Plm adjusts for unbalanced panel. It is observed that there are NA values in the database, but in this model, all the varaibles do not contain NA values so the results are the same. 
+
+```{r part(e), echo=TRUE}
+#ave() function gets the mean value for each firm
+data_demeaned.firm <- with(data,
+            data.frame(grant = grant - ave(grant, as.factor(fcode)),
+            employ = employ - ave(employ, as.factor(fcode)),
+            hrsemp = hrsemp - ave(hrsemp, as.factor(fcode))))
+model.5 <- lm(hrsemp ~ grant + employ, data_demeaned.firm)
+summary(model.5)
+```
+**part e**
+The coefficient of `grant` in model 5 is 34.90 and statistically significant (as p-value is <2e-16, less than 0.05). This means that when we fix the firm, the presence of a grant for a firm is associated with 34.90 hours of average training per worker more than without the grant, ceteris paribus. 
+
+The coefficient of `grant` is slightly higher than the 34.39 (standard error is 2.417), with a difference of 0.51, in model with two-way fixed effect and 33.71 (satandard error is 3.177), with a difference of 1.19, in the basic model, while remaining statistically significant. This is because this model has a entity-fix effect by demeaning the entity-demaned variable. It reduces the confounding variable bias, especially for firm specific confounders. However, the effect of such confounders is very small on the model. It does not account for the time specific confounders, but again these confounders do not have a very big effect on the model. Therefore, the changes are rather insignificant.
+
+**part f**
+The two-way fixed model (fixing years and firms), model 3, controls for the time-invariant confounder and the firm-invariant confounder stated in part c. By introducing `year` dummies in the regression equation, it allows us to control for the time-specific variable, or those variables that change with time and is the same for all firms in the same year, which is the entity-invariant variable identified. Similarly, by introducing `fcode`, the firm dummies, we control the firm-specific variable, which varies across firms but does not change with time, which are the time-invariants identified. 
+
+The model in part e, using entity-demeaned variable, constructs the demeaned variable for each firm. This is an entity-fixed effect regression, which controls for the time-invariant confounders identified. It does not control for the entity-invariant confounders. 
+
+Both models control for the confounders that vary both with time and across entities identifies in part c, which is the size of the firm. This is represented by the variable `employee` in the regression equation. A larger size of the firm is associated with a higher number of employees in the plant.

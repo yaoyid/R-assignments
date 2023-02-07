@@ -1,0 +1,124 @@
+---
+title: "BT2101_GA4"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r packages, echo=TRUE}
+library(AER)
+library(dplyr)
+library(tidyr)
+data(Fatalities)
+head(Fatalities)
+summary(Fatalities)
+library(plm)
+```
+
+```{r part(a), echo=TRUE}
+#generate fatal rate column, for the sake of convenience in interpreting the intercept and coefficient, the fatal rate will be converted from decimals to percentage. 
+Fatalities$frate <- Fatalities$fatal * 100 / Fatalities$pop
+
+#construct the basic model
+model1 <- lm(frate ~ beertax, Fatalities)
+summary(model1)
+```
+**question a**
+The intercept value is 0.01853 and statistically significant (as p-value of < 2e-16 is less than 0.05). This is the fatal rate in percentage when there is no beer tax imposed, which is 0.01853%. 
+
+The coefficient of `beertax` is 0.003646 and statistically significant (as p-value of 1.08e-08 is less than 0.05). This means that increasing beer tax by 1 dollar is associated with an increase of 0.003646% in fatal rate in percentage, ceteris paribus. 
+
+The multiple r-squared is 0.09336, meaning that 9.336% of the variance in `frate`, which is the fatal rate percentage, is explained by `beertax`. 
+
+``` {r part(b), echo=TRUE}
+# get the table of years present in the data set
+table.year <- table(Fatalities$year)
+table.year
+#count the number of distinct years
+nrow(table.year)
+
+# get the table of states present in the data set
+table.state <- table(Fatalities$state)
+table.state
+#count the number of distinct states
+nrow(table.state)
+
+colSums(is.na(Fatalities))
+```
+**question b**
+From the result, we can see that there are a total of 7 years in the data set. The data set includes 48 observations each for the 7 years from 1982 to 1988.
+
+There are 48 different states present in the data set. 
+
+Since there is no NA values present in the data frame, all entities are observed for all time periods. Therefore, this is a balanced panel. 
+
+```{r part(c), echo=TRUE}
+model2 <- lm(frate ~ beertax + state, Fatalities)
+summary(model2)
+```
+**question c**
+The regression result above is after state dummies are added to the regression equation. From the result, we can observe that the coefficient of `beertax` changes from 0.003646 and statistically significant (as p-value of 1.08e-08 is less than 0.05) to -0.006559. It is still statistically significant as p-value of 0.000556 is less than 0.05. After adding states as a variable, we can see that a one dollar increase in beer tax in the reference state (which is state al) is associated with a decrease in percentage of fatal rate of 0.006559%, ceteris paribus. 
+
+This change is due to the inclusion of dummy variables state, which is a confounding variable that influences both the beer tax and the fatal rates. Different states have different policies and tolerance towards alcohol, and the beer tax value differs. Similarly, different states have different traffic fatal rates, possibly due to population density and ownership of cars. Beer taxes varies with entities, which in this case are states. In addition, the other unobservable confounders such as population's attitude towards drinking are also accounted for when we include the variable state. Population's attitude differs among states but can be assumed constant over the observation span. Therefore, previously omitted variable bias(time invariant) in model 1 causes threats to internal validity of the model is addressed in this model. 
+
+```{r part(d), echo=TRUE}
+model3 <- lm(frate ~ beertax + year, Fatalities)
+summary(model3)
+```
+**question d**
+Previously, the coefficient of `beertax` in the basic model is 0.003646 and statistically significiant (as p-value of 1.08e-08 is less than 0.05). 
+
+The coefficient of `beertax` in model 3 is now 0.003663 and statistically significant (as p-value of 1.18e-08 is less than 0.05). This means that increasing beer tax by 1 dollar is associated with an increase of 0.003663% in fatal rate in percentage in 1982, ceteris paribus. 
+
+The increase in coefficient is almost negligible, only by 0.000017, which is 2.73% of the standard error in coefficient of `beertax` in the basic model. This is because when we include `year` as a dummy varaible, the issue of omission variable bias is still present in the model. Model 3 does not account for the time invariant, which include variables such as culture towards drinking. Each entity(state) has a different culture towards drinking, thus influencing the government's attitude and also beer tax. This culture also influences the fatal rates as a more carefree attitude towards drunk driving is likely to cause more deaths.  
+
+
+```{r part(e), echo = TRUE} 
+#the default model type of plm is "fixed effect"
+model4 <- plm(frate ~ beertax, index=c("state") , data = Fatalities)
+summary(model4)
+```
+**question e**
+The coefficient of `beertax` in model 4 is now -0.006559 and statistically significant (as p-value of 0.000556 is less than 0.05). This means that increasing beer tax by 1 dollar is associated with a decrease of 0.006559% in fatal rate in percentage, ceteris paribus. 
+
+The result is identical with result from model 2. Previously, the coefficient of `beertax` in model 2 is -0.006559 and statistically significant (as p-value of 0.000556 is less than 0.05). This is because model 4 is a state-fixed model, which controls the time invariant (such as drinking culture in a state) that could cause omitted variable bias in the basic model. Both model 2 and 4 fix the variable `state` thus have identical coefficients.
+
+```{r part(f), echo=TRUE}
+model5 <- plm(frate ~ beertax, effect = "time", data = Fatalities)
+summary(model5)
+```
+**question f**
+The result is identical from result from model 3. The coefficient of `beertax` in model 5 is 0.003663 and statistically significant (as p-value of 1.18e-08 is less than 0.05). This is identical to model 3, as they both control the influence of `year` on fatal rates.  
+
+**question g**
+GDP is a possible confounding variable of the model, as when GDP rises, car ownership will increase and thus traffic fatal rates might increase. Higher GDP can be associated with high tax revenue, and high beer tax as well. After establishing GDP as a possible confounder, we will then move on to examine whether it should be included in a regression model(model 3).
+
+GDP is an entity-invariant, meaning it is constant across all states. Meanwhile, GDP varies with time, as GDP changes every year. In model 3, we have state fixed effects, meaning we fix the effect of beer tax on fatal rates for each state, while visualizing the differences between states. Thus, when we include GDP as a variable, it does not contribute to the state fixed effect model as all states share the same GDP value for the same time period.
+
+```{r part(h), echo=TRUE}
+#ave() function gets the mean value in each group
+Fatalities_demeaned.state <- with(Fatalities,
+            data.frame(frate = frate - ave(frate, state),
+            beertaxs = beertax - ave(beertax, state)))
+model6 <- lm(frate ~ beertaxs, Fatalities_demeaned.state)
+summary(model6)
+```
+**question h**
+The coefficient of `beertaxs` in model 6 is -0.006559 and statistically significant (as p-value of 0.000196 is less than 0.05). This means that increasing beer tax by 1 dollar is associated with a decrease of 0.006559% in fatal rate in percentage, ceteris paribus. 
+
+The coefficient of `beertaxs` is identical with result from model 2 and model 4. However, the p-value becomes smaller (model 2 and 4 has p-value of 0.000556) indicating a higher level of significance of the coefficient of `beertaxs` in model 6.
+
+```{r part(i), echo=TRUE}
+Fatalities_demeaned.time <- with(Fatalities,
+            data.frame(frate = frate - ave(frate, year),
+            beertaxs = beertax - ave(beertax, year)))
+model7 <- lm(frate ~ beertaxs, Fatalities_demeaned.time)
+summary(model7)
+```
+**question i**
+The coefficient of `beertaxs` in model 7 is 3.663e-03 and statistically significant (as p-value of 8.66e-09 is less than 0.05). This means that increasing beer tax by 1 dollar is associated with an increase of 0.003663% in fatal rate in percentage, ceteris paribus. 
+
+The coefficient of `beertaxs` is identical with result from model 3 and model 5. However, the p-value becomes smaller (model 3 and 5 has p-value of 1.18e-08) indicating a higher level of significance of the coefficient of `beertaxs` in model 7.

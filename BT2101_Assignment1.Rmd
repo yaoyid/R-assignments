@@ -1,0 +1,118 @@
+---
+title: "BT2101_Assignment1"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_data, echo=TRUE}
+library(wooldridge)
+data(discrim)
+```
+
+```{r 1a, echo=TRUE}
+mean.prpblck <- mean(discrim$prpblck, na.rm = TRUE)
+mean.income <- mean(discrim$income, na.rm = TRUE)
+sd.prpblck <- sd(discrim$prpblck, na.rm = TRUE)
+sd.income <- sd(discrim$income, na.rm = TRUE)
+mean.prpblck
+mean.income
+sd.prpblck
+sd.income
+```
+
+(1a)
+The sample mean for `prpblck` is 0.1134864, and the standard deviation for `prpblck` is 0.1824165.
+The sample mean (in dollars) for `income` is 47053.78, and the standard deviation (in dollars) for `income` is 13179.29.
+
+```{r 1b, echo=TRUE}
+library(MASS)
+library(dplyr)
+
+##run the rlm model
+rlm <- rlm(psoda ~ prpblck, discrim)
+summary(rlm)
+lm <- lm(psoda ~ prpblck, discrim)
+summary(lm)
+
+##manual calculation of r-squared using the formula
+discrim.removeNA <- discrim[-rlm[["na.action"]], ]
+rsquared <- 1 - (sum(rlm$residuals ^ 2) / sum((discrim.removeNA$psoda - mean(discrim.removeNA$psoda))^2))
+rsquared
+
+
+##manual compilation of p-value using t value from the rlm model
+##t value of the coefficient of prpblck is 3.0958;
+##degree of freedom is 399
+pvalue <- 2 * pt(q = 3.0958, df = 399, lower.tail = FALSE)
+pvalue
+```
+
+**(1b)**
+The result of the model above is $psoda = 1.03 + 0.07 * prpblck + \mu$.
+Sample size is 401, r squared is 0.017. The coefficient of `prpblck` is 0.07, it means that when `prpblck` increases by 1 unit, `psoda` will increase by 0.07 dollar. When we interpret in the context of the data, when the proportion of black(zipcode) increases by 1 unit, the price of medium soda increases by 0.07. However, the value of `prpblck` should be between 0 and 1 since it is a proportion. This coefficient is significant, as it has a p-value of 0.00210 < 0.05. Therefore we can reject H0 and accept H1, that the coefficient of `prpblck` is significant. 
+
+The r squared is 0.01808 (0.01736). which is possibly due to the fact that `prpblck` may not be the only variable associated with `psoda`. However, the standard error of this coefficient is 0.0229, which is quite high comparing to the coefficient of 0.0708. This suggests that the coefficient may not be a very accurate estimate.
+
+**(1c)**
+We cannot use the model above to make causal claims. This model might be overly simplified as it only contains one decision variable. This is because the above model may have some threats to internal validity as stated below:
+**(1)Omitted Variable Bias**
+  Marginal costs and competition faced by the fast-food restaurant are confounders that are not included in the model. (A more detailed explanation will be provided in the subsequent parts) When we omit these confounders, the regression cannot provide us the causal effect of `prpblck` on `psoda`. Therefore, we fail to conclude that fast-food restaurants charge higher prices in areas with a larger concentration of blacks with a causality. Correct omitted variable bias by including the variables.
+
+**(2)Functional form misspecification**
+  It is possible that the assumption of `prpblck` is linearly associated with `psoda` is incorrect. There might exist a log-log correlation, or log-linear correlation. 
+  
+**(1d)**
+1. Cost of fast-food restaurant
+  A low marginal cost can lead to lower prices of goods and services sold in that area, and a low cost of living can have positive impact on proportion of black in the area as the living expenses are lower. 
+  Cost can contain:
+    (1) social and maintenance cost, as indicated by `crmrte`, crime rate in town. A high crime rate in town is associated with higher insurance cost, as the insurance companies bare more risks in a high crime region. This will transfer into higher marginal cost and thus prices charged by fast food companies.
+    
+    (2) taxes
+  A high governmental tax (VAT) can lead to high prices of general goods and services, thus high prices of fast food. A high tax can also mean that more governmental expenditure is available to spend on citizens' welfare and infrastructure, thus possibly higher proportion of black as they are more attracted to better social welfare. This is not a measurable confounder in the dataset. A possible proxy for taxes is the VAT rate.
+
+2. Competition faced by the fast-food restaurants
+    (1) geographical location
+  A high fast food price might be due to the local policy on pricing, such as a more lenient policy towards high prices charged by businesses. In addition, even geographical locations in the city can affect pricing, as CBD areas have higher rents thus higher price, while neighborhood might have lower rents and lower prices. In addition, in areas with more fast food outlets, it is likely that the price will be lower due to higher competition. Geographical location can also contribute to different proportion of black, due to historical reasons or simply the tendency to stay in areas of same race. The low number of outlets available in a community with high black proportion makes them have to bare the higher price if they want to get a quick meal from the neighborhood. This can be measured by `nstores`. If the number of fast food restaurants in the area is low, the fast food restaurant have higher control over price and act as a monopoly. Therefore, the fast food price is likely to be higher.
+
+3. the composition of population in the area
+  (1) income
+  Higher income means higher purchasing power of the population, therefore less sensitive about the price. Therefore, fast food companies may charge higher prices.  Possibly there exists past policies/discrimination at workforce towards black, leading to them having lower income. A high proportion of black `prpblck`, as a result, associates with lower median family income. This is measurable by `income` and `lincome`. 
+
+  (2)poverty
+  An area with higher poverty rate is likely to have a higher demand for fast food as it is very cheap. This high demand will lead to a higher price charged by the fast food company. In addition, areas with higher black proportion are likely to have high poverty rate due to historical reasons and lack of access to education due to discrimination in the past. This is measurable by `prppov` in the dataset.
+  
+4. Health consciousness
+  The culture of an area (e.g. health consciousness) has a correlation to the proportion of black. Racial discrimination in the past could possibly have a positive impact on the low health consciousness of black, as they were not educated on that. Similarly, a culture promoting fast food and place less emphasis on health consciousness as a integral part of everyone's life might lead to fast food price being less price elastic. This will lead to a higher fast food price thus higher `psoda`. However, this is not a measurable confounder. A possible proxy for measuring health consciousness is obesity rate.
+
+**1e**
+  For cost of fast-food restaurant, the social cost is measurable by `crmrte` in the data, taxes are not measurable by variables in the data. It can be measured by proxies like tax rates. Competition faced by the fast-food restaurants due to geographical locations can be measured by the number of stores, `nstores`. For the composition of population, income can be measured by `income` and `lincome`, however, `lincome` will be used in part (f) as it produces a more statistically significant correlation with price of soda. Poverty is measured by `prppov`. Health consciousness is not measurable, and can be measured by obesity rate.
+  
+```{r 1f, echo=TRUE}
+
+##`lincome` is used instead of `income` as
+rlm.2 <- rlm(psoda ~ prpblck + nstores + lincome  + prppov + crmrte, discrim)
+summary(rlm.2)
+## since the coefficients of `nstores`, `crmrte` are not statistically significant (t-values are too small), we exclude them from this linear model
+rlm.3 <- rlm(psoda ~ prpblck + lincome  + prppov, discrim)
+summary(rlm.3)
+
+##manual calculation of r-squared using the formula
+discrim.removeNA.3 <- discrim[-rlm.3[["na.action"]], ]
+rsquared.2 <- 1 - (sum(rlm.3$residuals ^ 2) / sum((discrim.removeNA.3$psoda - mean(discrim.removeNA.3$psoda))^2))
+rsquared.2
+
+adjusted<- 1 - ((1 - rsquared.2) * (401 - 1)/ (401 - 3 - 1))
+adjusted
+
+##manual compilation of p-value using t value from the rlm model
+##t value of the coefficient of prpblck is 2.8629;
+##degree of freedom is 401
+pvalue.new <- 2 * pt(q = 2.8629, df = 401, lower.tail = FALSE)
+pvalue.new
+```
+**(1f)**
+The result of the model above is $psoda = -0.44 + 0.09 * prpblck + 0.14 * lincome + 0.34 * prppov + \mu$.
+Sample size is 401, r squared is 0.084. The adjusted r squared is 0.077. The coefficient of `prpblck` is 0.09, it means that when `prpblck` increases by 1 unit, `psoda` will increase by 0.09 dollar. When we interpret in the context of the data, when the proportion of black(zipcode) increases by 1 unit, the price of medium soda increases by 0.09 dollar, keeping the linear log of income `lincome` and proportion of poverty `prppov` constant. This coefficient is significant, as it has a p-value of 0.00442 < 0.05. Therefore we can reject H0 and accept H1, that the coefficient of `prpblck` is significant. 

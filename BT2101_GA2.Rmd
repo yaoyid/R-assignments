@@ -1,0 +1,133 @@
+---
+title: "BT2101_GA2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r import_data, echo=TRUE}
+library(wooldridge)
+library(dplyr)
+library(tidyr)
+data(jtrain2)
+data(jtrain3)
+```
+
+```{r question(1a), echo=TRUE}
+# check if any NA values are present in the data set
+nrow(jtrain2) == nrow(jtrain2 %>% filter(is.na(`re78`) == FALSE) %>%
+  filter(is.na(`train`) == FALSE))
+##since no NA values are present, we will be using the jtrain2 dataset
+  
+plot(jtrain2$train, jtrain2$re78, main="Real Earning in 1978 against job training From experiment", ylab="Real Earning in 1978 in dollars", xlab="Job Training")
+lm1 <-lm(re78 ~ train, jtrain2)
+summary(lm1)
+
+
+abline(a=lm1[["coefficients"]][["(Intercept)"]], b=lm1[["coefficients"]][["train"]])
+
+boxplot((jtrain2%>%filter(train==0))$re78, xlab="real earning in 1978 with no training(3 IQR) from experiment", horizontal=TRUE,range=3)
+boxplot((jtrain2%>%filter(train==1))$re78, xlab="real earning in 1978 with training(3 IQR) from experiment", horizontal=TRUE,range=3)
+
+# check if any NA values are present in the data set
+nrow(jtrain3) == nrow(jtrain3 %>% filter(is.na(`re78`) == FALSE) %>%
+  filter(is.na(`train`) == FALSE))
+##since no NA values are present, we will be using the jtrain3 dataset
+  
+plot(jtrain3$train, jtrain3$re78, main="Real Earning in 1978 against job training From observational data", ylab="Real Earning in 1978 in dollars", xlab="Job Training")
+
+lm2 <-lm(re78 ~ train, jtrain3)
+summary(lm2)
+
+abline(a=lm2[["coefficients"]][["(Intercept)"]], b=lm2[["coefficients"]][["train"]])
+
+boxplot((jtrain3%>%filter(train==0))$re78, xlab="real earning in 1978 with no training(3 IQR) from observations", horizontal=TRUE,range=3)
+boxplot((jtrain3%>%filter(train==1))$re78, xlab="real earning in 1978 with training(3 IQR) from observations", horizontal=TRUE,range=3)
+
+nrow(jtrain2)
+nrow(jtrain3)
+
+mean((jtrain2%>%filter(train==0))$re78)
+mean((jtrain2%>%filter(train==1))$re78)
+mean((jtrain3%>%filter(train==0))$re78)
+mean((jtrain3%>%filter(train==1))$re78)
+```
+
+Potential reasons for different slopes -- the distribution of the DV values (number & distribution of outliers present, distribution of `re78` when train = 0 and 1 is skewed), number of samples collected.  From the boxplot, we can see that only 1 point lies outside 3 interquartile range from the mean for jtrain2, both when the worker is trained and not, as well as for trained workers in ktrain3. Meanwhile, there are 9 points lie outside 3 IQR from mean for jtrain3 when workers are not trained. 
+
+The mean values of `re78` when train=0 and train = 1 are different. In addition, the mean value of real income in 1978 when the worker is not trained is much higher for dataset jtrain3, which is 21.55 thousands of dollars, compared to jtrain2, which is 4.55 thousands of dollars. The mean value for train=1 are both 6.35 for jtrain2 and jtrain3. Since the line is plotted by making the mean values of `re78` when `train` = 0 as the intercept and the difference in mean with `train` = 1 as the gradient of the slope, the slope plotted with jtrain3 is negative, while the slope plotted with jtrain3 is positive.
+
+Note that since there is no NA values present, the subsequent parts will be using the **jtrain2** and **jtrain3** datasets.
+
+```{r question(1b), echo=TRUE}
+lm3 <-lm(re78 ~ train, jtrain2)
+summary(lm3)
+```
+Interpretation:
+  Intercept meaning: intercept has a value of 4.55, which is the expected real income in 1978 from the experiment is 4.55 thousands of dollars, when the sample(worker) is not trained under the experiment(which is the controlled group). This intercept value is statistically significant since p-value < 0.05.
+  coefficient of train meaning: the coefficient of `train` has a coefficient of 1.79, which means that a trained individual is expected to have a higher real income by 1.79 thousands of dollars than a non-trained individual based on the experiment. This coefficient is  statistically significant since p-value < 0.05.
+  multiple r-squared is 0.01782, meaning that this model explains 1.78% of the variance in `re78`.
+  
+```{r question(1c), echo=TRUE}
+lm4 <-lm(re78~re74 + re75 + educ + age + black + hisp + train, jtrain2)
+summary(lm4)
+```
+
+the estimated effect of `train` on `re78` doesn't change much, as the coefficient of `train` only decreases from 1.79 to 1.68 (and the unit is thousands of dollars). The coefficient of `train` remains statistically significant, with a p-value of 0.00803, smaller than the level of significance of 0.05. 
+
+The effect of job training on `re78` doesn't change much when we use a multi-variate regression. This is because amongst all the other regressors, only `educ`, education, is the other statistically significant regressor with p-value < 0.05 and thus has a significance in the linear regression model. Since **jtrain2** is obtained through experimentally assignment of training to participants, and `train`  was  supposed  to  be  assigned  randomly,  it  should  be roughly uncorrelated with  all other explanatory variables. Therefore, adding additional regressors will not impact the coefficient of `train`.
+
+```{r question(1d), echo=TRUE}
+lm5 <-lm(re78~train, jtrain3)
+summary(lm5)
+
+lm6 <-lm(re78~re74 + re75 + educ + age + black + hisp + train, jtrain3)
+summary(lm6)
+```
+the estimated effect of `train` on `re78` changed much when we use a multivariate regression instead of a univariate regression, as the coefficient of `train` increases from -15.20 to 0.21. When we run the univariate regression, the coefficient of `train` is -15.20, which implies a negative correlation between `train` and `re78`, that is when a worker is trained, his expected salary in 1978 is 15.2 thousands of dollars lower than a non-trained worker. This coefficient is statistically significant, as its p-value < 0.05. However, when we run the multivariate regression, the coefficient of `train` is 0.21, which implies a positive yet smaller correlation between `train` and `re78`. When a worker is trained, his expected salary in 1978 is 0.21 thousands of dollars higher than a non-trained worker, keeping all the other regressors constant. However, this coefficient is not statistically significant, as the p-value of 0.80 is greater than 0.05, and we fail to reject H0. 
+
+The reason behind such huge difference between a uni-variate and multivariate regression is possibly due to the fact that the jtrain3 comes from observational data where individuals determine whether they would like to participate into job training. The negative coefficient in the univariate regression can be due to predominantly the lower wage group self selecting into job training. Thus, this creates a systematic difference between the lower wage and higher wage group, as lower wage group most likely chooses to participate in training to improve their wages, while higher wage group does not see an incentive to train. Therefore, when we run a single variate regression, the coefficient of `train` is negative.
+
+```{r question(1e), echo=TRUE}
+jtrain2$aveRe <- ((jtrain2$re74 + jtrain2$re75)/2)
+hist(jtrain2$aveRe)
+jtrain3$aveRe <- ((jtrain3$re74 + jtrain3$re75)/2)
+hist(jtrain3$aveRe)
+
+library(psych)
+jtrain2.re<-describe(jtrain2$aveRe)%>%
+  mutate(cv=sd/mean) %>%
+  mutate(across(where(~ is.numeric(.)), ~ round(., 2)))
+
+jtrain3.re<-describe(jtrain3$aveRe)%>%
+  mutate(cv=sd/mean) %>%
+  mutate(across(where(~ is.numeric(.)), ~ round(., 2)))
+
+re<- rbind(jtrain2.re, jtrain3.re)
+rownames(re) = c("jtrain2", "jtrain3")
+re
+```
+From the result, we can see that the sample mean of `aveRe` for jtrain2 is 1.74 thousands of dollars, standard deviation is 3.9 thousands of dollars and the number of samples is 445. The maximum is 24.4 thousands of dollars.
+The sample mean of `aveRe` for jtrain3 is 18.04 thousands of dollars, standard deviation is 13.3 thousands of dollars and the number of samples is 2675. The maximum is 146.9 thousands of dollars. All the statistics mentioned above from jtrain3 are much larger than that of jtrain2. Thus, we do not agree that these data sets represent the same populations in 1978.
+
+
+```{r question(1f), echo=TRUE}
+jtrain2.new <- jtrain2 %>% filter(aveRe < 10)
+lm7 <- lm(re78 ~ train + re74 + re75 + educ + age + black + hisp, jtrain2.new)
+summary(lm7)
+```
+
+When we run the regression, the coefficient of `train` is 1.58, which implies a positive correlation between `train` and `re78`, that is when a worker is trained, his expected salary in 1978 is 1.58 thousands of dollars higher than a non-trained worker, keeping all other factors(real income in 1974, 1975, education level, age, race and hispanic) constant. This coefficient is statistically significant, as its t-statistics is 2.503, falls in the rejection region. The p-value of 0.01 also indicates this. Thus, H0 (the coefficient of `train` is statistically insignificant) is rejected. From part (c), we know that when running regression on the full sample, the coefficient of `train` is 1.68 and it is statistically significant. The slight difference of 0.10 in the coefficient is possibly to the presence of 4% of men with average real income greater than 10,000 dollars. 
+ 
+```{r question(1g), echo=TRUE}
+jtrain3.new <- jtrain3 %>% filter(aveRe <= 10)
+lm8 <- lm(re78 ~ train + re74 + re75 + educ + age + black + hisp, jtrain3.new)
+summary(lm8)
+
+jtrain2.new <- jtrain2 %>% filter(aveRe <= 10)
+lm9 <- lm(re78 ~ train + re74 + re75 + educ + age + black + hisp, jtrain2.new)
+summary(lm9)
+```
+When we run the regression on jtrain3, the coefficient of `train` is 1.84, which implies a positive correlation between `train` and `re78`, that is when a worker is trained, his expected salary in 1978 is 1.84 thousands of dollars higher than a non-trained worker, keeping all other factors(real income in 1974, 1975, education level, age, race and hispanic) constant. This coefficient is statistically significant, as its t-statistics is 2.07, falls in the rejection region. The p-value of 0.039 also indicates this. Thus, H0 (the coefficient of `train` is statistically insignificant) is rejected. This coefficient is similar to the coefficient of `train` from sub-sample regression on jtrain3, slightly higher by 0.26. We also noticed the huge difference between the coefficient of 0.21 on the whole sample and the coefficient of 1.84 on the sub-sample. This is possibly due to the fact that when a large data sample(population) is used, a large number of men (and possibly belonging to the low wage group) included in jtrain3 did not benefit from training, thus lead to an inconsistent result as compared to jtrain2.
